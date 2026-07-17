@@ -1,9 +1,10 @@
 package com.example.Simulador_de_Encomendas_em_Drone.domain.model;
 
 import com.example.Simulador_de_Encomendas_em_Drone.domain.state.DroneState;
-import com.example.Simulador_de_Encomendas_em_Drone.domain.state.impl.IdleState; // Estado padrão inicial
 import jakarta.persistence.*;
 import lombok.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "drones")
@@ -40,18 +41,21 @@ public class Drone {
     @Column(name = "pos_y_atual", nullable = false)
     private double posYAtual;
 
-    @Transient // Não persistido diretamente no banco, resolvido em tempo de execução
+    // --- ADICIONE ESTE BLOCO DAQUI EM DIANTE ---
+    @OneToMany(mappedBy = "drone", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @Builder.Default
+    private List<Pedido> pedidosAlocados = new ArrayList<>();
+    // ------------------------------------------
+
+    @Transient 
     private DroneState estadoInstancia;
 
-    /**
-     * Sincroniza a instância do padrão State baseada no Enum salvo no banco.
-     */
     public void inicializarEstado(DroneState estado) {
         this.estadoInstancia = estado;
         this.statusAtual = estado.getStatus();
     }
 
-    public void executarAcaoSimulacao() {
+    public void ejecutarAcaoSimulacao() {
         if (this.estadoInstancia != null) {
             this.estadoInstancia.processarTick(this);
         }
