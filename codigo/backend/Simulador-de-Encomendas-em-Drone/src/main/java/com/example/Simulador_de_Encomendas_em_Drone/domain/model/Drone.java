@@ -55,7 +55,7 @@ public class Drone {
         this.statusAtual = estado.getStatus();
     }
 
-    public void ejecutarAcaoSimulacao() {
+    public void executarAcaoSimulacao() {
         if (this.estadoInstancia != null) {
             this.estadoInstancia.processarTick(this);
         }
