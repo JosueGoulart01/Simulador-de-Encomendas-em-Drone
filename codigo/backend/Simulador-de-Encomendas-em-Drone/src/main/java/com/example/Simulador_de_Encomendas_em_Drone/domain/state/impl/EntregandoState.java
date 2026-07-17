@@ -11,12 +11,16 @@ public class EntregandoState implements DroneState {
     @Override
     public void processarTick(Drone drone) {
         if (drone.getPedidosAlocados() != null && !drone.getPedidosAlocados().isEmpty()) {
-            // Remove o pacote que acabou de ser entregue da lista
+            // Remove o primeiro pedido da lista do drone (o que acabou de chegar ao destino)
             Pedido pedidoEntregue = drone.getPedidosAlocados().remove(0);
+            
+            // SÓ AQUI o status vai para concluído no banco de dados!
             pedidoEntregue.alterarStatus(StatusPedido.ENTREGUE);
+            pedidoEntregue.setDrone(null); // Quebra o vínculo com o drone
         }
 
-        // Se ainda restam pacotes na mochila na mesma viagem, continua voando. Caso contrário, retorna à base (0,0)
+        // Se o drone ainda tiver mais pedidos na lista (entregas em lote), continua voando. 
+        // Se não, inicia o trajeto de retorno para a base central.
         if (drone.getPedidosAlocados() != null && !drone.getPedidosAlocados().isEmpty()) {
             drone.inicializarEstado(new EmVooState());
         } else {

@@ -6,25 +6,32 @@ import com.example.Simulador_de_Encomendas_em_Drone.domain.state.DroneState;
 import com.example.Simulador_de_Encomendas_em_Drone.domain.strategy.RoteamentoStrategy;
 import com.example.Simulador_de_Encomendas_em_Drone.domain.strategy.impl.RetaFugindoObstaculoStrategy;
 
+import java.util.Collections;
+
 public class RetornandoState implements DroneState {
 
     private final RoteamentoStrategy roteamentoStrategy = new RetaFugindoObstaculoStrategy();
     private static final double VELOCIDADE_DRONE = 2.0;
+    private static final double LIMITE_PROXIMIDADE = 0.2; // Tolerância matemática para ponto flutuante
 
     @Override
     public void processarTick(Drone drone) {
-        // O destino padrão de retorno é a base (0,0)
+        // Retorna em direção à Base Central (0.0, 0.0)
         double[] proximaPosicao = roteamentoStrategy.calcularProximoPasso(
                 drone.getPosXAtual(), drone.getPosYAtual(),
                 0.0, 0.0,
-                VELOCIDADE_DRONE, java.util.Collections.emptyList()
+                VELOCIDADE_DRONE, Collections.emptyList()
         );
 
         drone.atualizarPosicao(proximaPosicao[0], proximaPosicao[1]);
-        drone.consumirBateria(VELOCIDADE_DRONE * 0.3); // Gasta menos bateria porque voa sem peso
+        drone.consumirBateria(VELOCIDADE_DRONE * 0.3); // Consumo menor (sem peso de carga)
 
-        // Chegou na base central? Volta a ficar ocioso e disponível
-        if (drone.getPosXAtual() == 0.0 && drone.getPosYAtual() == 0.0) {
+        // Verificação por aproximação delta do ponto de origem
+        boolean chegouNaBaseX = Math.abs(drone.getPosXAtual() - 0.0) <= LIMITE_PROXIMIDADE;
+        boolean chegouNaBaseY = Math.abs(drone.getPosYAtual() - 0.0) <= LIMITE_PROXIMIDADE;
+
+        if (chegouNaBaseX && chegouNaBaseY) {
+            drone.atualizarPosicao(0.0, 0.0);
             drone.inicializarEstado(new IdleState());
         }
     }

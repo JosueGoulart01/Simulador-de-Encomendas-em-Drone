@@ -19,30 +19,32 @@ public class DashboardService {
     private final PedidoRepository pedidoRepository;
 
     @Transactional(readOnly = true)
-    public DashboardResponseDTO obterDadosDashboard() {
-        long entregues = pedidoRepository.countByStatus(StatusPedido.ENTREGUE);
-        long naFila = pedidoRepository.countByStatus(StatusPedido.FILA);
-        
-        // Descobre o drone líder em entregas
-        String droneTop = pedidoRepository.findDroneMaisEficiente();
-        if (droneTop == null) {
-            droneTop = "Nenhum drone realizou entregas ainda";
-        }
-
-        // Simulação do cálculo de tempo médio (Baseado na criação do pedido até o momento atual para os entregues)
-        // Em um cenário real com histórico, usaríamos um campo 'data_entrega' na tabela.
-        double tempoMedio = 0.0;
-        List<Pedido> todosEntregues = pedidoRepository.findAll().stream()
-                .filter(p -> p.getStatus() == StatusPedido.ENTREGUE)
-                .toList();
-
-        if (!todosEntregues.isEmpty()) {
-            long totalMinutos = todosEntregues.stream()
-                    .mapToLong(p -> Duration.between(p.getDataCriacao(), LocalDateTime.now()).toMinutes())
-                    .sum();
-            tempoMedio = (double) totalMinutos / todosEntregues.size();
-        }
-
-        return new DashboardResponseDTO(entregues, naFila, tempoMedio, droneTop);
+public DashboardResponseDTO obterDadosDashboard() {
+    // Conta APENAS os pedidos que já foram fisicamente entregues no destino
+    long entregues = pedidoRepository.countByStatus(StatusPedido.ENTREGUE);
+    
+    // Conta os pedidos que ainda estão na fila de espera aguardando drone
+    long naFila = pedidoRepository.countByStatus(StatusPedido.FILA);
+    
+    String droneTop = pedidoRepository.findDroneMaisEficiente();
+    if (droneTop == null) {
+        droneTop = "Nenhum drone realizou entregas ainda";
     }
+
+    double tempoMedio = 0.0;
+    
+    // Filtra estritamente os que já mudaram o status para ENTREGUE no banco
+    List<Pedido> todosEntregues = pedidoRepository.findAll().stream()
+            .filter(p -> p.getStatus() == StatusPedido.ENTREGUE)
+            .toList();
+
+    if (!todosEntregues.isEmpty()) {
+        long totalMinutos = todosEntregues.stream()
+                .mapToLong(p -> Duration.between(p.getDataCriacao(), LocalDateTime.now()).toMinutes())
+                .sum();
+        tempoMedio = (double) totalMinutos / todosEntregues.size();
+    }
+
+    return new DashboardResponseDTO(entregues, naFila, tempoMedio, droneTop);
+}
 }
