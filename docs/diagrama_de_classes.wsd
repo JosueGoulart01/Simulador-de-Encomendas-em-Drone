@@ -1,0 +1,87 @@
+@startuml
+skinparam style strictuml
+skinparam DefaultFontName Arial
+skinparam LineType orchid
+
+package "Domain - Core Entities" {
+    class Drone {
+        - id: Long
+        - identificador: String
+        - capacidadeMaxKg: Double
+        - autonomiaMaxKm: Double
+        - bateriaAtual: Double
+        - posXAtual: Double
+        - posYAtual: Double
+        - estadoAtual: DroneState
+        - pedidosAlocados: List<Pedido>
+        + alterarEstado(novoEstado: DroneState): void
+        + executarAcaoSimulacao(): void
+        + atualizarPosicao(x: Double, y: Double): void
+        + consumirBateria(qtd: Double): void
+    }
+
+    class Pedido {
+        - id: Long
+        - peso: Double
+        - posXDestino: Double
+        - posYDestino: Double
+        - prioridade: Prioridade
+        - status: StatusPedido
+        + alterarStatus(novoStatus: StatusPedido): void
+    }
+
+    class ZonaExclusao {
+        - id: Long
+        - xMin: Double; - yMin: Double
+        - xMax: Double; - yMax: Double
+        + interceptaLinha(x1: Double, y1: Double, x2: Double, y2: Double): Boolean
+    }
+}
+
+package "Pattern - State (Ciclo de Vida do Drone)" {
+    interface DroneState {
+        + processarTick(drone: Drone): void
+    }
+    class IdleState implements DroneState
+    class CarregandoState implements DroneState
+    class EmVooState implements DroneState
+    class EntregandoState implements DroneState
+    class RetornandoState implements DroneState
+}
+
+package "Pattern - Strategy (Algoritmos Mutáveis)" {
+    interface AlocacaoStrategy {
+        + otimizarAlocacao(pedidos: List<Pedido>, drones: List<Drone>): Map<Drone, List<Pedido>>
+    }
+    class KnapsackAlocacaoStrategy implements AlocacaoStrategy
+    class PrioridadeScoreAlocacaoStrategy implements AlocacaoStrategy
+
+    interface RoteamentoStrategy {
+        + calcularProximoPasso(atualX: Double, atualY: Double, destX: Double, destY: Double, obstaculos: List<ZonaExclusao>): Coordenada
+    }
+    class AStarRoteamentoStrategy implements RoteamentoStrategy
+    class RetaFugindoObstaculoStrategy implements RoteamentoStrategy
+}
+
+package "Simulation Engine & Events" {
+    class SimulacaoEngine {
+        - droneRepository: DroneRepository
+        - eventoPublisher: ApplicationEventPublisher
+        + dispararSimulacaoTick(): void
+    }
+    
+    class TickEvent {
+        - timestamp: Long
+    }
+}
+
+' Ligações de Dependência e Associações
+Drone "1" *-- "1" DroneState : "delegação de comportamento"
+Drone "1" o-- "*" Pedido : "contém"
+
+SimulacaoEngine ..> TickEvent : "publica"
+Drone ..> RoteamentoStrategy : "utiliza em voo"
+KnapsackAlocacaoStrategy ..> Drone : "avalia capacidade"
+KnapsackAlocacaoStrategy ..> Pedido : "avalia peso"
+
+@enduml
