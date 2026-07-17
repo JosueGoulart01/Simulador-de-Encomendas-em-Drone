@@ -1,0 +1,65 @@
+@startuml diagrama_de_pacotes
+
+skinparam packageStyle rectangle
+skinparam DefaultFontName Arial
+skinparam BackgroundColor #FFFFFF
+skinparam LineType ortho
+
+package "com.example.Simulador_de_Encomendas_em_Drone" {
+
+    package "controller" {
+    }
+    note right of controller : "Camada Web / REST\nRecebe requisições HTTP e valida dados de entrada."
+
+    package "dto" {
+    }
+    note right of dto : "Data Transfer Objects\nImutáveis (Records), evitam expor as entidades na API."
+
+    package "mapper" {
+    }
+    note right of mapper : "Conversores\nTransformam DTOs em Entidades e vice-versa."
+
+    package "service" {
+    }
+    note right of service : "Camada de Aplicação\nOrquestra as regras de negócio e transações."
+
+    package "repository" {
+    }
+    note right of repository : "Camada de Infraestrutura de Dados\nInterfaces do Spring Data JPA para o PostgreSQL."
+
+    package "domain" {
+        package "model" {
+        }
+        note right of model : "Rich Domain Model\nEntidades JPA puras com a lógica de negócio interna."
+
+        package "state" {
+        }
+        note right of state : "Pattern: State\nGerencia a transição de ciclo de vida do Drone (Tick por Tick)."
+
+        package "strategy" {
+        }
+        note right of strategy : "Pattern: Strategy\nAlgoritmos mutáveis de alocação (Mochila) e rota (A*)."
+    }
+
+    package "engine" {
+    }
+    note right of engine : "Motor de Simulação\nControla o relógio de tempo real do sistema (Ticks)."
+}
+
+' Fluxo de Dependências principais
+controller ..> dto : usa
+controller ..> service : chama
+service ..> repository : usa
+service ..> mapper : usa
+mapper ..> dto : mapeia
+mapper ..> model : mapeia
+
+repository ..> model : persiste
+
+' O core se comunica internamente
+engine ..> repository : lê/grava em lote
+engine ..> model : dispara ações
+model *-- state : delega ciclo de vida
+state ..> strategy : consulta para mover/alocar
+
+@enduml
