@@ -1,45 +1,66 @@
 package com.example.Simulador_de_Encomendas_em_Drone.service;
 
 import com.example.Simulador_de_Encomendas_em_Drone.domain.model.Drone;
-import com.example.Simulador_de_Encomendas_em_Drone.dto.DroneRequestDTO;
-import com.example.Simulador_de_Encomendas_em_Drone.dto.DroneResponseDTO;
-import com.example.Simulador_de_Encomendas_em_Drone.mapper.DroneMapper;
-import lombok.RequiredArgsConstructor;
+import com.example.Simulador_de_Encomendas_em_Drone.domain.model.StatusDrone;
+// Using standard runtime exceptions instead of a missing custom BusinessException
 import com.example.Simulador_de_Encomendas_em_Drone.repository.DroneRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor // Lombok gera construtor para injeção via Spring
+@RequiredArgsConstructor
 public class DroneService {
 
     private final DroneRepository droneRepository;
-    private final DroneMapper droneMapper;
+
+    public List<Drone> listarTodos() {
+        return droneRepository.findAll();
+    }
+
+    public Drone buscarPorId(Long id) {
+        return droneRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Drone com ID " + id + " não encontrado."));
+    }
 
     @Transactional
-    public DroneResponseDTO cadastrarDrone(DroneRequestDTO dto) {
-        if (droneRepository.existsByIdentificador(dto.identificador())) {
-            throw new IllegalArgumentException("Já existe um drone cadastrado com este identificador.");
+    public Drone salvar(Drone drone) {
+        // Todo drone novo começa na Base Central (0,0), com bateria cheia e ocioso
+        drone.setPosXAtual(0.0);
+        drone.setPosYAtual(0.0);
+        drone.setBateriaAtual(100.0);
+        drone.setStatusAtual(StatusDrone.IDLE);
+        return droneRepository.save(drone);
+    }
+
+    @Transactional
+    public Drone atualizar(Long id, Drone dadosAtualizados) {
+        Drone droneExistente = buscarPorId(id);
+
+        // Impede a edição de configurações críticas se o drone estiver em missão física
+        if (droneExistente.getStatusAtual() != StatusDrone.IDLE) {
+            throw new RuntimeException("Não é possível atualizar um drone que não esteja em estado IDLE (Ocioso). Status atual: " + droneExistente.getStatusAtual());
         }
-        Drone drone = droneMapper.toEntity(dto);
-        Drone droneSalvo = droneRepository.save(drone);
-        return droneMapper.toResponseDTO(droneSalvo);
+
+        // Atualiza estritamente os parâmetros estruturais
+        droneExistente.setIdentificador(dadosAtualizados.getIdentificador());
+        droneExistente.setCapacidadeMaxKg(dadosAtualizados.getCapacidadeMaxKg());
+        droneExistente.setAutonomiaMaxKm(dadosAtualizados.getAutonomiaMaxKm());
+
+        return droneRepository.save(droneExistente);
     }
 
-    @Transactional(readOnly = true)
-    public List<DroneResponseDTO> listarTodosDrones() {
-        return droneRepository.findAll().stream()
-                .map(droneMapper::toResponseDTO)
-                .collect(Collectors.toList());
-    }
+    @Transactional
+    public void deletar(Long id) {
+        Drone drone = buscarPorId(id);
 
-    @Transactional(readOnly = true)
-    public DroneResponseDTO buscarPorId(Long id) {
-        Drone drone = droneRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Drone não encontrado com o ID fornecido."));
-        return droneMapper.toResponseDTO(drone);
+        // Impede a deleção de drones em pleno vôo para evitar inconsistência de dados
+        if (drone.getStatusAtual() != StatusDrone.IDLE) {
+            throw new RuntimeException("Não é possível remover um drone em missão ativa! Status atual: " + drone.getStatusAtual());
+        }
+
+        droneRepository.delete(drone);
     }
 }
