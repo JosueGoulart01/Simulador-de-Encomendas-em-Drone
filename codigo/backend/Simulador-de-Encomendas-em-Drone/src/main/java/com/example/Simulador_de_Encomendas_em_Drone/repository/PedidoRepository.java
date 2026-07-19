@@ -5,20 +5,20 @@ import com.example.Simulador_de_Encomendas_em_Drone.domain.model.StatusPedido;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+
 import java.util.List;
 
 @Repository
 public interface PedidoRepository extends JpaRepository<Pedido, Long> {
     
+    long countByStatus(StatusPedido status);
+    
     List<Pedido> findByStatusOrderByPrioridadeDescDataCriacaoAsc(StatusPedido status);
 
-    long countByStatus(StatusPedido status);
+    // Busca os últimos 10 pedidos entregues para o histórico do painel
+    List<Pedido> findTop10ByStatusOrderByIdDesc(StatusPedido status);
 
-    // Busca o identificador do drone que tem mais registros de pedidos com status 'ENTREGUE'
-    @Query(value = "SELECT d.identificador FROM pedidos p " +
-                   "JOIN drones d ON p.drone_id = d.id " +
-                   "WHERE p.status_pedido = 'ENTREGUE' " +
-                   "GROUP BY d.identificador " +
-                   "ORDER BY COUNT(p.id) DESC LIMIT 1", nativeQuery = true)
+    // Query customizada para achar o drone que mais vezes aparece em pedidos concluídos
+    @Query("SELECT p.drone.identificador FROM Pedido p WHERE p.status = 'ENTREGUE' GROUP BY p.drone.identificador ORDER BY COUNT(p) DESC LIMIT 1")
     String findDroneMaisEficiente();
 }
