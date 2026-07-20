@@ -13,6 +13,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/drones")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*") // Permite integração direta com o Front-end
 public class DroneController {
 
     private final DroneService droneService;

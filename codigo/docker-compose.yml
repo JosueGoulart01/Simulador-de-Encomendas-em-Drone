@@ -1,50 +1,53 @@
 version: '3.8'
 
 services:
-  postgres:
+  # --- BANCO DE DADOS (POSTGRESQL 16) ---
+  db:
     image: postgres:16-alpine
-    container_name: drone-postgres
-    restart: unless-stopped
+    container_name: simulador_db
+    restart: always
     environment:
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-      POSTGRES_DB: ${DB_NAME:-drone_db}
+      POSTGRES_DB: simulador_drones
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: '12345'
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U postgres -d simulador_drones"]
+      interval: 5s
       timeout: 5s
       retries: 5
 
+  # --- BACKEND (SPRING BOOT - JAVA 21) ---
   backend:
     build:
       context: ./backend/Simulador-de-Encomendas-em-Drone
       dockerfile: Dockerfile
-    container_name: drone-backend
-    restart: unless-stopped
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-drone_db}
-      SPRING_DATASOURCE_USERNAME: ${DB_USER:-postgres}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-postgres}
+    container_name: simulador_backend
+    restart: always
     ports:
       - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/simulador_drones
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=12345
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
 
+  # --- FRONTEND (NEXT.JS) ---
   frontend:
     build:
-      context: ./frontend
+      context: ./frontend # Ajuste para o caminho correto da pasta do seu Frontend
       dockerfile: Dockerfile
-    container_name: drone-frontend
-    restart: unless-stopped
-    environment:
-      NEXT_PUBLIC_API_BASE_URL: /backend-api
+    container_name: simulador_frontend
+    restart: always
     ports:
       - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8080/api
     depends_on:
       - backend
 

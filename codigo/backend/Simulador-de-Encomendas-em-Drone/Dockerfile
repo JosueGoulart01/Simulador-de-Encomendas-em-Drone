@@ -1,12 +1,12 @@
-# Estágio de build (Maven + JDK)
+# Estágio 1: Build da aplicação
 FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
 COPY pom.xml .
 COPY src ./src
 RUN mvn clean package -DskipTests
 
-# Estágio final (JRE)
-FROM eclipse-temurin:21-jre-alpine
+# Estágio 2: Execução do Jar
+FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
