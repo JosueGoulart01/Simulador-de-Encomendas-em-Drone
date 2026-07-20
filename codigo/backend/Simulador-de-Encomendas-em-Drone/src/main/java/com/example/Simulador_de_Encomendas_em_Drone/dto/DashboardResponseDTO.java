@@ -3,17 +3,22 @@ package com.example.Simulador_de_Encomendas_em_Drone.dto;
 import java.util.List;
 
 public record DashboardResponseDTO(
-    // Métricas Globais (Cards)
+    // Métricas existentes
     long totalEntregasRealizadas,
     long totalPedidosAguardando,
     double tempoMedioMinutosPorEntrega,
     String droneMaisEficiente,
-    
-    // Status da Frota em Tempo Real
     long dronesTotal,
     long dronesEmVoo,
     long dronesOciosos,
 
-    // Histórico Recente (Tabela do Dashboard)
+    // NOVOS CAMPOS
+    long totalPedidos,
+    long pedidosEmTransito,        // ALOCADO + EM_TRANSITO
+    double bateriaMedia,
+    String droneMenorBateria,      // identificador do drone com menor %
+    long dronesCarregando,
+    long dronesEntregando,
+
     List<EntregaRecenteDTO> ultimasEntregas
 ) {}

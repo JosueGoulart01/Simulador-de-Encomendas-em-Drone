@@ -9,19 +9,6 @@ import type {
   ApiValidationError,
 } from "./types"
 
-/**
- * Camada de integração com a API REST (Spring Boot).
- *
- * Por padrão as chamadas passam pelo proxy same-origin `/backend-api`
- * (configurado em next.config.mjs -> rewrites), o que evita erros de CORS:
- * o navegador chama a mesma origem e o servidor Next.js repassa para o
- * Spring Boot (BACKEND_API_URL, padrão http://localhost:8080/api).
- *
- * Para chamar o back-end diretamente (sem proxy), defina
- * NEXT_PUBLIC_API_BASE_URL — nesse caso o servidor precisa habilitar CORS.
- *
- * Todas as chamadas batem no back-end real — não há dados mockados.
- */
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "/backend-api"
 
@@ -29,7 +16,6 @@ export function isApiValidationError(e: unknown): e is ApiValidationError {
   return typeof e === "object" && e !== null && "erro" in e && "status" in e
 }
 
-/** Erro lançado quando não há comunicação com o servidor (offline/CORS/rede). */
 export class NetworkError extends Error {
   constructor(message = "Sem conexão com o servidor") {
     super(message)
@@ -46,7 +32,6 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       ...options,
     })
   } catch {
-    // Falha de rede (servidor fora do ar, CORS, DNS, etc.)
     throw new NetworkError()
   }
 
@@ -70,14 +55,14 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  // ---- GET (polling / carregamento) ----
+  // GET
   getDrones: () => request<Drone[]>("/drones"),
   getFila: () => request<Pedido[]>("/pedidos/fila"),
   getPedidosAtivos: () => request<Pedido[]>("/pedidos/fila"),
   getDashboard: () => request<DashboardKPIs>("/simulacao/dashboard"),
   getZonas: () => request<ZonaExclusao[]>("/zonas-exclusao"),
 
-  // ---- POST (cadastros) ----
+  // POST
   createDrone: (body: NovoDrone) =>
     request<Drone>("/drones", { method: "POST", body: JSON.stringify(body) }),
   createPedido: (body: NovoPedido) =>
@@ -85,7 +70,13 @@ export const api = {
   createZona: (body: NovaZona) =>
     request<ZonaExclusao>("/zonas-exclusao", { method: "POST", body: JSON.stringify(body) }),
 
-  // ---- DELETE ----
+  // PUT
+  updateDrone: (id: number, body: NovoDrone) =>
+    request<Drone>(`/drones/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+
+  // DELETE
+  deleteDrone: (id: number) =>
+    request<null>(`/drones/${id}`, { method: "DELETE" }),
   deleteZona: (id: number) =>
     request<null>(`/zonas-exclusao/${id}`, { method: "DELETE" }),
 }

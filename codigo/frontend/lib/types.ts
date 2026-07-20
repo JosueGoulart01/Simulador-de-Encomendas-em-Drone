@@ -45,6 +45,16 @@ export interface DashboardKPIs {
   totalPedidosAguardando: number
   tempoMedioMinutosPorEntrega: number
   droneMaisEficiente: string
+  dronesTotal: number
+  dronesEmVoo: number
+  dronesOciosos: number
+  // Novos campos
+  totalPedidos: number
+  pedidosEmTransito: number
+  bateriaMedia: number
+  droneMenorBateria: string
+  dronesCarregando: number
+  dronesEntregando: number
 }
 
 export interface NovoDrone {
