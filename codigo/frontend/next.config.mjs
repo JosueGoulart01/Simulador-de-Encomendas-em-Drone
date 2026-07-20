@@ -10,6 +10,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  output: 'standalone',
   // Proxy same-origin: o navegador chama /backend-api/* (mesma origem),
   // e o servidor Next.js repassa para o Spring Boot. Elimina o erro de CORS.
   async rewrites() {
