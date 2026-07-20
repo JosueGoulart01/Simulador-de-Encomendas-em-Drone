@@ -27,6 +27,10 @@ Plataforma full-stack para orquestração, roteamento e monitoramento de frotas 
 **AeroGrid** é um simulador full-stack de logística aérea autônoma. O sistema recria, em um plano cartesiano, o ciclo completo de operação de uma frota de drones — da criação do pedido até a entrega final — combinando algoritmos de alocação inteligente, desvio dinâmico de obstáculos e visualização em tempo real.
  
 Pensado como ferramenta educacional e demonstrativa, o projeto aplica na prática conceitos como máquinas de estado finito, estratégias de roteamento, processamento orientado a eventos e engenharia de dados em tempo real.
+
+## Deploy
+
+https://simulador-de-encomendas-em-drone-front.onrender.com/
  
 ### Ciclo de Vida da Simulação
  

@@ -9,8 +9,8 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**") // Aplica para todas as rotas que começam com /api
-                .allowedOrigins("http://localhost:3000", "http://127.0.0.1:3000") // Permite o seu front-end do Docker
+        registry.addMapping("/api/**") 
+                .allowedOrigins("*")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD")
                 .allowedHeaders("*")
                 .allowCredentials(false);
