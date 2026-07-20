@@ -7,7 +7,7 @@ export type DroneStatus =
 
 export type Prioridade = "BAIXA" | "MEDIA" | "ALTA"
 
-export type PedidoStatus = "FILA" | "ALOCADO" | "ENTREGUE" | "CANCELADO"
+export type PedidoStatus = "FILA" | "ALOCADO" | "ENTREGUE" | "CANCELADO" | "EM_TRANSITO" | "ERRO"
 
 export interface Drone {
   id: number
@@ -26,7 +26,7 @@ export interface Pedido {
   posXDestino: number
   posYDestino: number
   prioridade: Prioridade
-  status: PedidoStatus
+  status: PedidoStatus   // agora inclui todos os valores
   dataCriacao: string
   droneId: number | null
 }

@@ -21,8 +21,12 @@ export function useFila() {
   return { fila: data ?? [], error, isLoading }
 }
 
+// CORRIGIDO: busca todos os pedidos e filtra os em andamento
 export function usePedidosAtivos() {
-  const { data, error, isLoading } = useSWR("pedidos-ativos", () => api.getPedidosAtivos(), {
+  const { data, error, isLoading } = useSWR("pedidos-ativos", async () => {
+    const all = await api.getTodosPedidos()
+    return all.filter(p => p.status === "ALOCADO" || p.status === "EM_TRANSITO")
+  }, {
     refreshInterval: POLL_INTERVAL,
     keepPreviousData: true,
   })

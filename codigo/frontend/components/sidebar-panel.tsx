@@ -24,7 +24,7 @@ export function SidebarPanel() {
         </TabsTrigger>
       </TabsList>
 
-      <div className="mt-4 flex-1 overflow-y-auto pr-1">
+      <div className="mt-3 flex-1 overflow-y-auto pr-1">
         <TabsContent value="cadastros" className="mt-0">
           <CadastrosTab />
         </TabsContent>

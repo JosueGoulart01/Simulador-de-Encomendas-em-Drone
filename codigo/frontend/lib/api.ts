@@ -58,7 +58,7 @@ export const api = {
   // GET
   getDrones: () => request<Drone[]>("/drones"),
   getFila: () => request<Pedido[]>("/pedidos/fila"),
-  getPedidosAtivos: () => request<Pedido[]>("/pedidos/fila"),
+  getTodosPedidos: () => request<Pedido[]>("/pedidos"),   // <-- NOVO
   getDashboard: () => request<DashboardKPIs>("/simulacao/dashboard"),
   getZonas: () => request<ZonaExclusao[]>("/zonas-exclusao"),
 

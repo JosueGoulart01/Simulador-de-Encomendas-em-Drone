@@ -15,6 +15,7 @@ interface MapCanvasProps {
 const MIN_SCALE = 8
 const MAX_SCALE = 60
 const DEFAULT_SCALE = 22
+const INTERP_FACTOR = 0.35 // ← mais responsivo
 
 export function MapCanvas({ drones, zonas, pedidosAtivos, offline }: MapCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -22,7 +23,6 @@ export function MapCanvas({ drones, zonas, pedidosAtivos, offline }: MapCanvasPr
   const [scale, setScale] = useState(DEFAULT_SCALE)
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null)
 
-  // Refs para animação suave (interpolação entre ticks do polling).
   const dronesRef = useRef<Drone[]>(drones)
   const zonasRef = useRef<ZonaExclusao[]>(zonas)
   const pedidosRef = useRef<Pedido[]>(pedidosAtivos)
@@ -31,18 +31,10 @@ export function MapCanvas({ drones, zonas, pedidosAtivos, offline }: MapCanvasPr
   const tRef = useRef(0)
   const mouseRef = useRef<{ px: number; py: number } | null>(null)
 
-  useEffect(() => {
-    dronesRef.current = drones
-  }, [drones])
-  useEffect(() => {
-    zonasRef.current = zonas
-  }, [zonas])
-  useEffect(() => {
-    pedidosRef.current = pedidosAtivos
-  }, [pedidosAtivos])
-  useEffect(() => {
-    scaleRef.current = scale
-  }, [scale])
+  useEffect(() => { dronesRef.current = drones }, [drones])
+  useEffect(() => { zonasRef.current = zonas }, [zonas])
+  useEffect(() => { pedidosRef.current = pedidosAtivos }, [pedidosAtivos])
+  useEffect(() => { scaleRef.current = scale }, [scale])
 
   const centerBase = useCallback(() => setScale(DEFAULT_SCALE), [])
 
@@ -81,14 +73,14 @@ export function MapCanvas({ drones, zonas, pedidosAtivos, offline }: MapCanvasPr
       const wx = (x: number) => cx + x * s
       const wy = (y: number) => cy - y * s
 
-      // ---- Fundo radial (mission control) ----
+      // ---- Fundo ----
       const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(width, height) * 0.75)
       g.addColorStop(0, "#0b1626")
       g.addColorStop(1, "#060a12")
       ctx.fillStyle = g
       ctx.fillRect(0, 0, width, height)
 
-      // ---- Grade a cada 1 unidade ----
+      // ---- Grade ----
       const unitsX = Math.ceil(cx / s) + 1
       const unitsY = Math.ceil(cy / s) + 1
       ctx.lineWidth = 1
@@ -119,7 +111,6 @@ export function MapCanvas({ drones, zonas, pedidosAtivos, offline }: MapCanvasPr
       ctx.lineTo(wx(0), height)
       ctx.stroke()
 
-      // ---- Rótulos dos eixos (a cada 5 unidades) ----
       ctx.fillStyle = "rgba(255,255,255,0.45)"
       ctx.font = "10px var(--font-sans, system-ui)"
       ctx.textAlign = "center"
@@ -146,33 +137,28 @@ export function MapCanvas({ drones, zonas, pedidosAtivos, offline }: MapCanvasPr
         ctx.setLineDash([6, 4])
         ctx.strokeRect(x, y, w, h)
         ctx.setLineDash([])
-        // label pill
-        const label = z.nome
         ctx.font = "600 11px var(--font-sans, system-ui)"
-        const tw = ctx.measureText(label).width
+        const tw = ctx.measureText(z.nome).width
         ctx.fillStyle = "rgba(231,76,60,0.92)"
         roundRect(ctx, x + 4, y + 4, tw + 12, 18, 4)
         ctx.fill()
         ctx.fillStyle = "#fff"
         ctx.textAlign = "left"
         ctx.textBaseline = "middle"
-        ctx.fillText(label, x + 10, y + 4 + 9)
+        ctx.fillText(z.nome, x + 10, y + 4 + 9)
       }
 
       // ---- Destinos de pedidos ativos ----
       for (const p of pedidosRef.current) {
         const x = wx(p.posXDestino)
         const y = wy(p.posYDestino)
-        const alocado = p.status === "ALOCADO"
-        const col = alocado ? "#34d399" : "#fbbf24"
-        // haste
+        const col = p.status === "ALOCADO" ? "#34d399" : "#fbbf24"
         ctx.strokeStyle = col
         ctx.lineWidth = 2
         ctx.beginPath()
         ctx.moveTo(x, y)
         ctx.lineTo(x, y - 16)
         ctx.stroke()
-        // balão
         ctx.fillStyle = col
         ctx.beginPath()
         ctx.arc(x, y - 18, 7, 0, Math.PI * 2)
@@ -182,14 +168,13 @@ export function MapCanvas({ drones, zonas, pedidosAtivos, offline }: MapCanvasPr
         ctx.textAlign = "center"
         ctx.textBaseline = "middle"
         ctx.fillText(String(p.id), x, y - 18)
-        // ponto no destino
         ctx.fillStyle = col
         ctx.beginPath()
         ctx.arc(x, y, 2.5, 0, Math.PI * 2)
         ctx.fill()
       }
 
-      // ---- Interpolação das posições dos drones ----
+      // ---- Interpolação dos drones ----
       const dronesNow = dronesRef.current
       const liveIds = new Set<number>()
       for (const d of dronesNow) {
@@ -200,9 +185,8 @@ export function MapCanvas({ drones, zonas, pedidosAtivos, offline }: MapCanvasPr
           hx: 0,
           hy: 1,
         }
-        const nx = cur.x + (d.posXAtual - cur.x) * 0.12
-        const ny = cur.y + (d.posYAtual - cur.y) * 0.12
-        // vetor de direção (para orientar o ícone)
+        const nx = cur.x + (d.posXAtual - cur.x) * INTERP_FACTOR
+        const ny = cur.y + (d.posYAtual - cur.y) * INTERP_FACTOR
         const dx = nx - cur.x
         const dy = ny - cur.y
         if (Math.abs(dx) > 0.0005 || Math.abs(dy) > 0.0005) {
@@ -213,40 +197,60 @@ export function MapCanvas({ drones, zonas, pedidosAtivos, offline }: MapCanvasPr
         cur.y = ny
         animPos.current.set(d.id, cur)
       }
-      // limpar drones removidos
       for (const id of animPos.current.keys()) {
         if (!liveIds.has(id)) animPos.current.delete(id)
       }
 
-      // ---- Rastros de voo (drone -> destino) ----
+      // ---- RASTROS DE VOO (IDA E VOLTA) ----
       for (const d of dronesNow) {
-        if (!["EM_VOO", "ENTREGANDO", "CARREGANDO"].includes(d.statusAtual)) continue
-        const pedido = pedidosRef.current.find((p) => p.droneId === d.id)
-        if (!pedido) continue
-        const pos = animPos.current.get(d.id)!
+        const pos = animPos.current.get(d.id)
+        if (!pos) continue
+
+        const isFlying = ["EM_VOO", "ENTREGANDO", "CARREGANDO"].includes(d.statusAtual)
+        const isReturning = d.statusAtual === "RETORNANDO"
+
+        if (!isFlying && !isReturning) continue
+
+        const x1 = wx(pos.x)
+        const y1 = wy(pos.y)
+
+        let x2: number, y2: number
+
+        if (isFlying) {
+          // Rota para o destino do pedido ativo
+          const pedido = pedidosRef.current.find(p => p.droneId === d.id)
+          if (!pedido) continue
+          x2 = wx(pedido.posXDestino)
+          y2 = wy(pedido.posYDestino)
+        } else if (isReturning) {
+          // Rota de volta para a base (0,0)
+          x2 = wx(0)
+          y2 = wy(0)
+        } else {
+          continue
+        }
+
         ctx.strokeStyle = "rgba(34,211,238,0.45)"
         ctx.lineWidth = 1.5
         ctx.setLineDash([4, 6])
         ctx.lineDashOffset = -(tRef.current % 20)
         ctx.beginPath()
-        ctx.moveTo(wx(pos.x), wy(pos.y))
-        ctx.lineTo(wx(pedido.posXDestino), wy(pedido.posYDestino))
+        ctx.moveTo(x1, y1)
+        ctx.lineTo(x2, y2)
         ctx.stroke()
         ctx.setLineDash([])
         ctx.lineDashOffset = 0
       }
 
-      // ---- Base central (0,0) com varredura de radar ----
+      // ---- Base central ----
       const bx = wx(0)
       const by = wy(0)
-      // anéis pulsantes
       const pulse = (tRef.current % 90) / 90
       ctx.strokeStyle = `rgba(34,211,238,${0.35 * (1 - pulse)})`
       ctx.lineWidth = 2
       ctx.beginPath()
       ctx.arc(bx, by, 14 + pulse * 40, 0, Math.PI * 2)
       ctx.stroke()
-      // sweep
       const sweep = (tRef.current * 0.02) % (Math.PI * 2)
       const sweepR = 3 * s
       const sg = ctx.createConicGradient(sweep, bx, by)
@@ -259,7 +263,6 @@ export function MapCanvas({ drones, zonas, pedidosAtivos, offline }: MapCanvasPr
       ctx.arc(bx, by, sweepR, 0, Math.PI * 2)
       ctx.closePath()
       ctx.fill()
-      // disco da base
       ctx.fillStyle = "#22d3ee"
       ctx.beginPath()
       ctx.arc(bx, by, 12, 0, Math.PI * 2)
@@ -267,7 +270,6 @@ export function MapCanvas({ drones, zonas, pedidosAtivos, offline }: MapCanvasPr
       ctx.strokeStyle = "rgba(255,255,255,0.85)"
       ctx.lineWidth = 2
       ctx.stroke()
-      // ícone casa/heliporto (H)
       ctx.strokeStyle = "#fff"
       ctx.lineWidth = 2
       ctx.beginPath()
@@ -278,7 +280,6 @@ export function MapCanvas({ drones, zonas, pedidosAtivos, offline }: MapCanvasPr
       ctx.moveTo(bx - 4, by)
       ctx.lineTo(bx + 4, by)
       ctx.stroke()
-      // rótulo BASE
       ctx.fillStyle = "rgba(34,211,238,0.9)"
       ctx.font = "700 10px var(--font-sans, system-ui)"
       ctx.textAlign = "center"
@@ -287,13 +288,13 @@ export function MapCanvas({ drones, zonas, pedidosAtivos, offline }: MapCanvasPr
 
       // ---- Drones ----
       for (const d of dronesNow) {
-        const pos = animPos.current.get(d.id)!
+        const pos = animPos.current.get(d.id)
+        if (!pos) continue
         const x = wx(pos.x)
         const y = wy(pos.y)
         const color = STATUS_META[d.statusAtual].color
         const moving = d.statusAtual === "EM_VOO" || d.statusAtual === "RETORNANDO"
 
-        // brilho / halo
         const glow = ctx.createRadialGradient(x, y, 0, x, y, 16)
         glow.addColorStop(0, hexAlpha(color, 0.5))
         glow.addColorStop(1, hexAlpha(color, 0))
@@ -311,12 +312,10 @@ export function MapCanvas({ drones, zonas, pedidosAtivos, offline }: MapCanvasPr
           ctx.stroke()
         }
 
-        // corpo do drone: quadricóptero simplificado orientado pela direção
-        const ang = Math.atan2(-pos.hy, pos.hx) // tela: y invertido
+        const ang = Math.atan2(-pos.hy, pos.hx)
         ctx.save()
         ctx.translate(x, y)
-        ctx.rotate(moving ? ang : 0)
-        // braços
+        if (moving) ctx.rotate(ang)
         ctx.strokeStyle = "rgba(255,255,255,0.75)"
         ctx.lineWidth = 1.5
         const arm = 6
@@ -326,7 +325,6 @@ export function MapCanvas({ drones, zonas, pedidosAtivos, offline }: MapCanvasPr
         ctx.moveTo(arm, -arm)
         ctx.lineTo(-arm, arm)
         ctx.stroke()
-        // rotores
         ctx.fillStyle = hexAlpha(color, 0.9)
         for (const [ox, oy] of [
           [-arm, -arm],
@@ -338,7 +336,6 @@ export function MapCanvas({ drones, zonas, pedidosAtivos, offline }: MapCanvasPr
           ctx.arc(ox, oy, 2.4, 0, Math.PI * 2)
           ctx.fill()
         }
-        // núcleo
         ctx.fillStyle = color
         ctx.strokeStyle = "rgba(255,255,255,0.95)"
         ctx.lineWidth = 2
@@ -348,7 +345,6 @@ export function MapCanvas({ drones, zonas, pedidosAtivos, offline }: MapCanvasPr
         ctx.stroke()
         ctx.restore()
 
-        // etiqueta com nome
         ctx.font = "600 10px var(--font-sans, system-ui)"
         const tw = ctx.measureText(d.identificador).width
         ctx.fillStyle = "rgba(11,21,36,0.7)"
@@ -360,7 +356,7 @@ export function MapCanvas({ drones, zonas, pedidosAtivos, offline }: MapCanvasPr
         ctx.fillText(d.identificador, x, y - 26 + 8)
       }
 
-      // ---- Leitura de coordenadas do cursor ----
+      // ---- Coordenadas do mouse ----
       const m = mouseRef.current
       if (m) {
         const worldX = (m.px - cx) / s
@@ -412,44 +408,26 @@ export function MapCanvas({ drones, zonas, pedidosAtivos, offline }: MapCanvasPr
             <WifiOff className="size-7 text-destructive" aria-hidden />
             <p className="text-sm font-semibold text-foreground">Sem conexão com o back-end</p>
             <p className="max-w-xs text-xs text-muted-foreground">
-              Inicie o servidor Spring Boot e verifique a URL da API. O mapa atualiza automaticamente ao reconectar.
+              Inicie o servidor Spring Boot e verifique a URL da API.
             </p>
           </div>
         </div>
       )}
 
-      {/* Controles */}
+      {/* Controles de zoom */}
       <div className="absolute bottom-4 right-4 flex flex-col gap-2">
-        <Button
-          size="icon"
-          variant="secondary"
-          onClick={() => setScale((s) => Math.min(MAX_SCALE, s + 4))}
-          aria-label="Aproximar"
-          className="size-9 shadow-lg"
-        >
+        <Button size="icon" variant="secondary" onClick={() => setScale(s => Math.min(MAX_SCALE, s + 4))} aria-label="Aproximar" className="size-9 shadow-lg">
           <Plus className="size-4" />
         </Button>
-        <Button
-          size="icon"
-          variant="secondary"
-          onClick={() => setScale((s) => Math.max(MIN_SCALE, s - 4))}
-          aria-label="Afastar"
-          className="size-9 shadow-lg"
-        >
+        <Button size="icon" variant="secondary" onClick={() => setScale(s => Math.max(MIN_SCALE, s - 4))} aria-label="Afastar" className="size-9 shadow-lg">
           <Minus className="size-4" />
         </Button>
-        <Button
-          size="icon"
-          variant="secondary"
-          onClick={centerBase}
-          aria-label="Centralizar na base"
-          className="size-9 shadow-lg"
-        >
+        <Button size="icon" variant="secondary" onClick={centerBase} aria-label="Centralizar na base" className="size-9 shadow-lg">
           <LocateFixed className="size-4" />
         </Button>
       </div>
 
-      {/* Legenda */}
+      {/* ✅ LEGENDA (mantida e visível) */}
       <div className="absolute bottom-4 left-4 flex flex-wrap gap-x-4 gap-y-1.5 rounded-md border border-border bg-background/50 px-3 py-2 backdrop-blur-sm">
         {Object.entries(STATUS_META).map(([key, meta]) => (
           <div key={key} className="flex items-center gap-1.5">
@@ -466,6 +444,7 @@ export function MapCanvas({ drones, zonas, pedidosAtivos, offline }: MapCanvasPr
   )
 }
 
+// ---- Funções auxiliares ----
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath()
   ctx.moveTo(x + r, y)
