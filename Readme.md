@@ -114,10 +114,11 @@ graph TB
     SVC --> REPO
     REPO --> DB
 ```
- 
-> Espaço reservado para o diagrama de classes e pacotes. Insira aqui a imagem gerada a partir do código-fonte.
- 
-![Diagrama de Classes e Pacotes](./docs/diagrama-classes.png)
+<img width="3130" height="875" alt="diagrama_de_classes" src="https://github.com/user-attachments/assets/916efa20-9e65-4818-b02d-848a53e03956" />
+
+<img width="1137" height="833" alt="diagrama_de_pacotes" src="https://github.com/user-attachments/assets/1d0849af-951c-49a3-8757-52e4bda999fc" />
+
+
  
 ### Padrões de Projeto Utilizados
  
