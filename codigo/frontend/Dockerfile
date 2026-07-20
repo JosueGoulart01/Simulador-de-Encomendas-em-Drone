@@ -1,5 +1,11 @@
 # Estágio de build
 FROM node:20-alpine AS builder
+
+# --- ADICIONE ESTAS LINHAS ---
+ARG NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+# -----------------------------
+
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
@@ -13,11 +19,8 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Copia o standalone gerado pelo Next.js
 COPY --from=builder /app/.next/standalone ./
-# Copia os arquivos estáticos
 COPY --from=builder /app/.next/static ./.next/static
-# Copia os arquivos públicos
 COPY --from=builder /app/public ./public
 
 EXPOSE ${PORT}
